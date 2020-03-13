@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Today's weather in past years</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+  </head>
+  <body>
+    <p>This graph shows the Dutch weather since 1990, for today's date. Was today hotter or cooler last year? And what about 20 years ago?</p>
+    <div id="linegraph"></div>
+
+    <script>
+      var data = {{ data|tojson }};
+
+      // parse dates
+      for (d in data) {
+        var date = String(data[d].date);
+        data[d].date = new Date(date.substring(0,4), date.substring(4,6)-1, date.substring(6,8));
+      }
+      console.log(data);
+
+      // set margins
+      var margin = {top: 10, right: 30, bottom: 30, left: 60},
+          width = 1000 - margin.left - margin.right,
+          height = 400 - margin.top - margin.bottom;
+
+      // create svg object
+      var svg = d3.select("#linegraph")
+                  .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      // x scaling
+      var xScale = d3.scaleTime()
+        .domain([d3.min(data, function(d) { return d.date }), d3.max(data, function(d) { return d.date })])
+        .range([0, width]);
+
+      // y scaling
+      var yScale = d3.scaleLinear()
+        .domain([d3.min(data, function(d) { return d.temp})-50, d3.max(data, function(d) { return d.temp})+50])
+        .range([height, 0]);
+
+      // create the line object, with smoothing
+      var line = d3.line()
+        .x(function(d) { return xScale(d.date); })
+        .y(function(d) { return yScale(d.temp); })
+        .curve(d3.curveMonotoneX);
+
+      // call x-axis
+      svg.append("g")
+          .attr("class", "x-axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(xScale));
+
+      // call y-axis
+      svg.append("g")
+          .attr("class", "y-axis")
+          .call(d3.axisLeft(yScale)
+                  .tickFormat(d => d/10));
+
+      // create line
+      svg.append("path")
+          .datum(data)
+          .attr("class", "line")
+          .attr("d", line);
+
+    </script>
+  </body>
+</html>
